@@ -1,19 +1,23 @@
 #include "FastLED.h"
+#include <SerialCommand.h>
 
 #define NUM_LEDS 16
 #define DATA_PIN A0
 
-String inputString = "";         // a string to hold incoming data
-boolean stringComplete = false;  // whether the string is complete
-
+SerialCommand SCmd;
 
 int mode = 0;
+int anim = 0;
 
 CRGB leds[NUM_LEDS];
 
 void setup() {
   Serial.begin(115200);
-  inputString.reserve(200);
+
+  // set up serial commands callbacks
+  SCmd.addCommand("mode",cmd_mode);
+  SCmd.addDefaultHandler(cmd_unknown);
+  SCmd.setEOL('\n');
 
   // initialize random
   randomSeed(analogRead(A5));
@@ -28,19 +32,19 @@ void setup() {
 }
 
 void loop() {
-  if (stringComplete) {
-    Serial.print("Received: ");
-    Serial.println(inputString);
-    processCommand(inputString);
-    // clear the string:
-    inputString = "";
-    stringComplete = false;
-  }
-  
-  int anim = random(1,3);
+  // Read Serial Com
+  SCmd.readSerial();
+
+  // if mode is 0, then pick a random animation
+  if(mode == 0)
+    anim = random(1,3);
 
   switch(anim)
   {
+  case 0:
+    delay(500);
+    break;
+  
   case 1:
     wave(5, 60, 4);
     break;
@@ -52,12 +56,13 @@ void loop() {
 
   }
 
-  fade_all_to_black(10);
+  if(anim > 0)
+    fade_all_to_black(10);
 
-  Serial.println("-- Loop --");
+  Serial.println("-- Loop! --");
 }
 
-void serialEvent() {
+/*void serialEvent() {
   while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read();
@@ -69,16 +74,22 @@ void serialEvent() {
       stringComplete = true;
     } 
   }
+}*/
+
+void cmd_unknown()
+{
+  Serial.println("400 Bad Request");
 }
 
-void processCommand(String command)
+void cmd_mode()
 {
-  if(command.startsWith("mode"))
+  char *arg;  
+  arg = SCmd.next();
+  if(arg != NULL)
   {
-    if(command.length() > 4)
-      mode = command.substring(5).toInt();
-    Serial.print("Mode=");
-    Serial.println(mode);
+    mode = atoi(arg);
+    Serial.print("200 Mode set to: ");
+    Serial.println(mode);  
   }
 }
 
