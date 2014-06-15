@@ -7,17 +7,19 @@
 
 SerialCommand SCmd;
 
+
 byte mode = 0;
 byte anim = 0;
 
 CRGB leds[NUM_LEDS];
 
 void setup() {
-  Serial.begin(115200); // keep serial high to not slow down animations too much when printing at the same time
+  Serial.begin(9600); // a slow baudrate may slow down animations if printing from within the animation loop.
 
   // set up serial commands callbacks
   SCmd.addCommand("mode",cmd_mode);
   SCmd.addCommand("anim",cmd_anim);
+  SCmd.addCommand("fadeb", cmd_anim_fade_blink);
   SCmd.addDefaultHandler(cmd_unknown);
   SCmd.setEOL('\n');
 
@@ -26,15 +28,18 @@ void setup() {
 
   FastLED.addLeds<NEOPIXEL, LEDS_DATA_PIN, GRB>(leds, NUM_LEDS);
 
-  fill_rainbow(&leds[0], 16, 0, 16);
+  fill_rainbow(&(leds[0]), 16, 0, 16);
   FastLED.show();
   delay(400);
   fade_all_to_black(10);
+  Serial.println("000 Setup Complete");
 }
 
 void loop() {
   // Read Serial Com
   SCmd.readSerial();
+
+  Serial.println("001 Start Loop");
 
   // if mode is 0, then pick a random animation
   if(mode == 0)
@@ -64,14 +69,14 @@ void loop() {
   }
 
   if(anim > 0)
-    fade_all_to_black(10);
+    fade_all_to_black(20);
 
-  Serial.println("-- Loop! --");
+  Serial.println("002 End Loop");
 }
 
 void cmd_unknown()
 {
-  Serial.println("400 Bad Request");
+  Serial.println("404 Not Found");
 }
 
 void cmd_mode()
